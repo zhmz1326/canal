@@ -1,0 +1,8 @@
+title: Canal
+description: 阿里巴巴mysql数据库binlog的增量订阅&消费组件
+google_analytics: UA-10379866-5
+show_downloads: true
+theme: jekyll-theme-cayman
+
+gems:
+  - jekyll-mentions
