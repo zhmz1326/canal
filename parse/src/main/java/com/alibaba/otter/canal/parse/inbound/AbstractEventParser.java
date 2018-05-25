@@ -206,16 +206,37 @@ public abstract class AbstractEventParser<EVENT> extends AbstractCanalLifeCycle 
                                     return running;
                                 } catch (TableIdNotFoundException e) {
                                     throw e;
-                                } catch (Throwable e) {
-                                    if (e.getCause() instanceof TableIdNotFoundException) {
-                                        throw (TableIdNotFoundException) e.getCause();
-                                    }
-                                    // 记录一下，出错的位点信息
+                                } catch (IllegalArgumentException e) {
+                                	// 只记录出错的位点信息 
+                                	// com.alibaba.otter.canal.parse.exception.CanalParseException: parse row data failed.
+                                	// Caused by: java.lang.IllegalArgumentException: limit excceed: 151
+                                    // at com.taobao.tddl.dbsync.binlog.LogBuffer.getLong64(LogBuffer.java:874) ~[canal.parse.dbsync-1.0.26-SNAPSHOT.jar:na]
                                     processSinkError(e,
                                         this.lastPosition,
                                         startPosition.getJournalName(),
                                         startPosition.getPosition());
-                                    throw new CanalParseException(e); // 继续抛出异常，让上层统一感知
+                                    return running;
+                                } catch (Throwable e) {
+                                    if (e.getCause() instanceof TableIdNotFoundException) {
+                                        throw (TableIdNotFoundException) e.getCause();
+                                    } else if (e.getCause() instanceof IllegalArgumentException) {
+                                    	// 只记录出错的位点信息 
+                                    	// com.alibaba.otter.canal.parse.exception.CanalParseException: parse row data failed.
+                                    	// Caused by: java.lang.IllegalArgumentException: limit excceed: 151
+                                        // at com.taobao.tddl.dbsync.binlog.LogBuffer.getLong64(LogBuffer.java:874) ~[canal.parse.dbsync-1.0.26-SNAPSHOT.jar:na]
+                                        processSinkError(e,
+                                            this.lastPosition,
+                                            startPosition.getJournalName(),
+                                            startPosition.getPosition());
+                                        return running;
+                                    } else {
+	                                    // 记录一下，出错的位点信息
+	                                    processSinkError(e,
+	                                        this.lastPosition,
+	                                        startPosition.getJournalName(),
+	                                        startPosition.getPosition());
+	                                    throw new CanalParseException(e); // 继续抛出异常，让上层统一感知
+                                    }
                                 }
                             }
 
@@ -272,16 +293,16 @@ public abstract class AbstractEventParser<EVENT> extends AbstractCanalLifeCycle 
                     } catch (Throwable e) {
                         processDumpError(e);
                         exception = e;
-                        if (!running) {
+                        /*if (!running) {
                             if (!(e instanceof java.nio.channels.ClosedByInterruptException || e.getCause() instanceof java.nio.channels.ClosedByInterruptException)) {
                                 throw new CanalParseException(String.format("dump address %s has an error, retrying. ",
                                     runningInfo.getAddress().toString()), e);
                             }
-                        } else {
+                        } else {*/
                             logger.error(String.format("dump address %s has an error, retrying. caused by ",
                                 runningInfo.getAddress().toString()), e);
                             // sendAlarm(destination, ExceptionUtils.getFullStackTrace(e)); // 没什么用，注释掉
-                        }
+                        /*}*/
                     } finally {
                         // 重新置为中断状态
                         Thread.interrupted();
@@ -292,15 +313,15 @@ public abstract class AbstractEventParser<EVENT> extends AbstractCanalLifeCycle 
                                 erosaConnection.disconnect();
                             }
                         } catch (IOException e1) {
-                            if (!running) {
+                            /*if (!running) {
                                 throw new CanalParseException(String.format("disconnect address %s has an error, retrying. ",
                                     runningInfo.getAddress().toString()),
                                     e1);
-                            } else {
+                            } else {*/
                                 logger.error("disconnect address {} has an error, retrying., caused by ",
                                     runningInfo.getAddress().toString(),
                                     e1);
-                            }
+                            /*}*/
                         }
                     }
                     // 出异常了，退出sink消费，释放一下状态
