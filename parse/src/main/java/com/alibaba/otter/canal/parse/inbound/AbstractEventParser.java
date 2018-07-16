@@ -216,10 +216,20 @@ public abstract class AbstractEventParser<EVENT> extends AbstractCanalLifeCycle 
                                         startPosition.getJournalName(),
                                         startPosition.getPosition());
                                     return running;
+                                } catch (NullPointerException e) {
+                                	// 只记录出错的位点信息 
+                                	// 2018-07-16 16:50:11.900 [destination = jyt , address = canal-mysql.jm.com/192.168.8.191:3306 , EventParser] WARN  
+                                	// c.a.otter.canal.parse.inbound.mysql.MysqlEventParser - ERROR ## parse this event has an error , last position : [mysql-bin.000017,4]
+                                	//		java.lang.NullPointerException: null
+                                    processSinkError(e,
+                                        this.lastPosition,
+                                        startPosition.getJournalName(),
+                                        startPosition.getPosition());
+                                    return running;
                                 } catch (Throwable e) {
                                     if (e.getCause() instanceof TableIdNotFoundException) {
                                         throw (TableIdNotFoundException) e.getCause();
-                                    } else if (e.getCause() instanceof IllegalArgumentException) {
+                                    } else if (e.getCause() instanceof IllegalArgumentException || e.getCause() instanceof NullPointerException) {
                                     	// 只记录出错的位点信息 
                                     	// com.alibaba.otter.canal.parse.exception.CanalParseException: parse row data failed.
                                     	// Caused by: java.lang.IllegalArgumentException: limit excceed: 151
